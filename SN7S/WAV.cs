@@ -8,14 +8,14 @@ namespace SN7S
         private readonly int _numChannels = numChannels;
         private readonly short _bitsPerSample = bitsPerSample;
 
-        public void Write(string filePath, List<short> samples)
+        public void Write(string filePath, short[] samples)
         {
             using FileStream fs = new(filePath, FileMode.Create, FileAccess.Write);
             using BinaryWriter bw = new(fs, Encoding.ASCII);
 
             int byteRate = _sampleRate * _numChannels * (_bitsPerSample / 8);
             short blockAlign = (short)(_numChannels * (_bitsPerSample / 8));
-            int subchunk2Size = samples.Count * (_bitsPerSample / 8);
+            int subchunk2Size = samples.Length * (_bitsPerSample / 8);
             int chunkSize = 36 + subchunk2Size;
 
             bw.Write(Encoding.ASCII.GetBytes("RIFF"));

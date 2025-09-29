@@ -14,8 +14,14 @@ namespace SN7S
 
             List<VGMCommand> cmds = VGMParser.ParseCommands(br, header);
 
-            List<short> samples = [];
             SN76489 psg = new(clockRate: header.SN76489Clock, sampleRate: 44100, lsfrSize: 15);
+
+            int totalSamples = cmds
+                .Where(c => c.Type == VGMCommandType.Wait)
+                .Sum(c => c.Value);
+
+            short[] samples = new short[totalSamples];
+            int offset = 0;
 
             Stopwatch sw = Stopwatch.StartNew();
             foreach (var cmd in cmds)
@@ -27,9 +33,12 @@ namespace SN7S
                         break;
 
                     case VGMCommandType.Wait:
-                        for (int i = 0; i < cmd.Value; i++)
-                            samples.Add(psg.GenerateSample());
-                        break;
+                        {
+                            var span = samples.AsSpan(offset, cmd.Value);
+                            psg.GenerateSamples(span);
+                            offset += cmd.Value;
+                            break;
+                        }
 
                     default:
                         break;
