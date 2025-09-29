@@ -15,7 +15,7 @@ namespace SN7S
             List<VGMCommand> cmds = VGMParser.ParseCommands(br, header);
 
             List<short> samples = [];
-            SN76489 psg = new(clockRate: header.SN76489Clock, sampleRate: 44100, lsfrSize: 16);
+            SN76489 psg = new(clockRate: header.SN76489Clock, sampleRate: 44100, lsfrSize: 15);
 
             Stopwatch sw = Stopwatch.StartNew();
             foreach (var cmd in cmds)

@@ -4,7 +4,7 @@ namespace SN7S.Core
 {
     public sealed class SN76489
     {
-        private readonly int[] _volumeTable = new int[16];
+        private readonly float[] _volumeTable = new float[16];
 
         private readonly ToneChannel[] _tones = [ new(1), new(2), new(3) ];
         private readonly NoiseChannel _noise = new();
@@ -15,7 +15,6 @@ namespace SN7S.Core
         private readonly CommandQueue _commands = new();
         private LatchCommand _latch = new();
 
-        private const int PrescaleCycles = 16;
         private int _prescaler = 16;
         private ulong _cycleCount;
         private ulong _cycleFrac;
@@ -29,9 +28,9 @@ namespace SN7S.Core
             _sampleRate = sampleRate;
 
             for (int i = 0; i < 15; i++)
-                _volumeTable[i] = (int)(32767.0 * Math.Pow(10, (-2.0 * i) / 20.0));
+                _volumeTable[i] = (float)Math.Pow(10.0, (-2.0 * i) / 20.0);
 
-            _volumeTable[15] = 0;
+            _volumeTable[15] = 0.0f;
 
             if (lsfrSize != 15 && lsfrSize != 16)
                 Console.WriteLine("WARNING: Invalid LSFR size");
@@ -86,14 +85,15 @@ namespace SN7S.Core
 
         private short Mix()
         {
-            int acc = 0;
+            float acc = 0f;
 
             foreach (var tone in _tones)
-                acc += tone.Output ? _volumeTable[tone.Volume] : 0;
+                acc += tone.Output ? _volumeTable[tone.Volume] : 0f;
 
-            acc += _noise.Output ? _volumeTable[_noise.Volume] : 0;
+            acc += _noise.Output ? _volumeTable[_noise.Volume] : 0f;
 
-            acc >>= 2;
+            acc /= 4f;
+            acc *= short.MaxValue;
 
             if (acc > short.MaxValue) return short.MaxValue;
             if (acc < short.MinValue) return short.MinValue;
@@ -124,7 +124,7 @@ namespace SN7S.Core
             int channel = _latch.Channel;
 
             if (_latch.IsVolume) ApplyVolume(channel, (byte)(data & 0x0F));
-            else                 ApplyToneOrNoise(command, channel, data);
+            else                 ApplyChannel(command, channel, data);
         }
 
         private void ApplyVolume(int channel, byte volume)
@@ -135,7 +135,7 @@ namespace SN7S.Core
                 _noise.Volume = volume;
         }
 
-        private void ApplyToneOrNoise(IncomingCommand command, int channel, byte data)
+        private void ApplyChannel(IncomingCommand command, int channel, byte data)
         {
             if (channel < _tones.Length)
             {
