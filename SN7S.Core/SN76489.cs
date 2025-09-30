@@ -5,6 +5,7 @@ namespace SN7S.Core
     public sealed class SN76489
     {
         private readonly float[] _volumeTable = new float[16];
+        private readonly LowPassFilter _filter;
 
         private readonly ToneChannel[] _tones = [ new(1), new(2), new(3) ];
         private readonly NoiseChannel _noise = new();
@@ -26,6 +27,7 @@ namespace SN7S.Core
         {
             _clockRate = clockRate;
             _sampleRate = sampleRate;
+            _filter = new LowPassFilter(sampleRate, sampleRate / 2f); // Use Nyquist for cutoff
 
             for (int i = 0; i < 15; i++)
                 _volumeTable[i] = (float)Math.Pow(10.0, (-2.0 * i) / 20.0);
@@ -92,7 +94,7 @@ namespace SN7S.Core
 
             acc += _noise.Output ? _volumeTable[_noise.Volume] : 0f;
 
-            acc /= 4f;
+            acc = _filter.Process(acc / 4f);
             acc *= short.MaxValue;
 
             if (acc > short.MaxValue) return short.MaxValue;
